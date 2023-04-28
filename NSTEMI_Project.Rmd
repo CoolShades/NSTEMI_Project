@@ -231,18 +231,18 @@ Followups <- c("Mortality_FU", "CV_Mortality_FU", "ACS_FU", "MajBleeding_FU", "T
 
 doParallel::registerDoParallel()
 
-for(i in 1:5) {
+foreach(i=1:5, .packages = c("tidyverse", "gtsummary", "survival", "gt", "dplyr")) %dopar% {
 
-UV_T[[i]] <- tbl_uvregression(NSTEMI,
-                 method = coxph,
-                 y = Surv(time = !!sym(Followups[i]), event = !!sym(Outcomes[i])),
+UV_T[[i]] <- gtsummary::tbl_uvregression(NSTEMI,
+                 method = survival::coxph,
+                 y = survival::Surv(time = !!sym(Followups[i]), event = !!sym(Outcomes[i])),
                  exponentiate = T,
-                 include = c(DCB_DES, Age, Sex, dplyr::starts_with("PMHx"), FHx_CAD, Smok_Stat, GFR, Creatinine, Vessel_Tx, LMSLAD_VesselTx, LMS_VesselTx, Multivessel_VesselTx, denovo_VesselDiam, denovo_LesionLgth, Vessel_GT3mm, Tash_Bif, Coronary_Dissection, Frailty_Sc, Frailty_Bin, Heavy_Calc, Hb, Lym, Neu, WBC, ends_with("Acuity"), Acuity_Sc)) %>%
+                 include = c(DCB_DES, Age, Sex, dplyr::starts_with("PMHx"), FHx_CAD, Smok_Stat, GFR, Creatinine, Vessel_Tx, LMSLAD_VesselTx, LMS_VesselTx, Multivessel_VesselTx, denovo_VesselDiam, denovo_LesionLgth, Vessel_GT3mm, Tash_Bif, Coronary_Dissection, Diffuse_Dx, Tortuosity, Frailty_Sc, Frailty_Bin, Heavy_Calc, Hb, Lym, Neu, WBC, ends_with("Acuity"), Acuity_Sc)) %>%
   modify_header(label = paste0("**",Outcomes[i],"**", " (Univariate)")) %>%
   bold_p() %>%
   as_gt()
 
-gtsave(UV_T[[i]], paste0("UV_Tables/" , Outcomes[i], "_UV.html"))
+gt::gtsave(UV_T[[i]], paste0("UV_Tables/" , Outcomes[i], "_UV.html"))
 
 }
 ```
