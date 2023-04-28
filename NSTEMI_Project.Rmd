@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 ```{r Ensure Folders Exist}
-Folders_Req <- c("Data", "Normality_Testing", "Table1", "UV_Tables", "MV_Tables", "Cum_Haz_Plots_UnMatched", "CumHazPlots_Bif_True", "CumHazPlots_Bif_False", "CumHazPlots_GT3mm_True", "CumHazPlots_GT3mm_False", "CumHazPlots_GT65_True", "CumHazPlots_GT65_False", "CumHazPlots_Male", "CumHazPlots_Female", "Matching_Files")
+Folders_Req <- c("Data", "Normality_Testing", "Table1", "UV_Tables", "MV_Tables", "Cum_Haz_Plots_UnMatched", "CumHazPlots_Bif_True", "CumHazPlots_Bif_False", "CumHazPlots_GT3mm_True", "CumHazPlots_GT3mm_False", "CumHazPlots_GT65_True", "CumHazPlots_GT65_False", "CumHazPlots_Male", "CumHazPlots_Female", "Matching_Files", "Cum_Haz_Plots_Matched", "Cum_Haz_Plots_Matched_BifT", "Cum_Haz_Plots_Matched_BifF", "Cum_Haz_Plots_Matched_GT3mm_T", "Cum_Haz_Plots_Matched_GT3mm_F", "Cum_Haz_Plots_Matched_GT65", "Cum_Haz_Plots_Matched_LT65", "Cum_Haz_Plots_Matched_Male", "Cum_Haz_Plots_Matched_Female")
 
 for (i in 1:length(Folders_Req)) {
 
@@ -1890,7 +1890,7 @@ fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_Male)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_Male/PS_CumHazPlots_GT3.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -1919,7 +1919,7 @@ fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_Male)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_Male/PS_CumHazPlots_GT3_365.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -1948,7 +1948,7 @@ fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_Male)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_Male/PS_CumHazPlots_GT3_30.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -1979,7 +1979,7 @@ fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_Female)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_Female/PS_CumHazPlots_GT3.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2008,7 +2008,7 @@ fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_Female)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_Female/PS_CumHazPlots_GT3_365.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2037,7 +2037,7 @@ fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_Female)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_Female/PS_CumHazPlots_GT3_30.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2068,7 +2068,7 @@ fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_GT65)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT65/PS_CumHazPlots_GT3.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2097,7 +2097,7 @@ fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_GT65)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT65/PS_CumHazPlots_GT3_365.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2126,7 +2126,7 @@ fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_GT65)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT65/PS_CumHazPlots_GT3_30.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2157,7 +2157,7 @@ fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_LT65)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_LT65/PS_CumHazPlots_GT3.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2186,7 +2186,7 @@ fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_LT65)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_LT65/PS_CumHazPlots_GT3_365.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
@@ -2215,7 +2215,7 @@ fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_LT65)
 ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
 
-cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_LT65/PS_CumHazPlots_GT3_30.pdf",
          width = 6, height = 6, onefile = T)
 print(ps_plot1, newpage = F)
 print(ps_plot2)
