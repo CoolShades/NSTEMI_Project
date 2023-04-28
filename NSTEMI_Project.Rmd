@@ -1,30 +1,2227 @@
 ---
 title: "NSTEMI Project"
-author: "U Bhalraam"
-date: "`r Sys.Date()`"
-output: html_document
+output: html_notebook
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r Ensure Folders Exist}
+Folders_Req <- c("Data", "Normality_Testing", "Table1", "UV_Tables", "MV_Tables", "Cum_Haz_Plots_UnMatched", "CumHazPlots_Bif_True", "CumHazPlots_Bif_False", "CumHazPlots_GT3mm_True", "CumHazPlots_GT3mm_False", "CumHazPlots_GT65_True", "CumHazPlots_GT65_False", "CumHazPlots_Male", "CumHazPlots_Female", "Matching_Files")
+
+for (i in 1:length(Folders_Req)) {
+
+if (!dir.exists(paste0(Folders_Req[i]))){
+  dir.create(paste0(Folders_Req[i]))
+}else{
+  print(paste0(Folders_Req[i], " exists"))
+}
+}
+
 ```
 
-## R Markdown
+```{r Loading Libraries}
+library(MatchIt)
+library(tidyverse)
+library(haven)
+library(readxl)
+library(gtsummary)
+library(rstatix)
+library(ggpubr)
+library(doParallel)
+library(survival)
+library(ggpubr)
+library(survminer)
+library(My.stepwise)
+library(gt)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+doParallel::registerDoParallel()
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+theme_gtsummary_journal(journal = "jama")
+#> Setting theme `JAMA`
+theme_gtsummary_compact()
+#> Setting theme `Compact`
 ```
 
-## Including Plots
+```{r Columns Handling}
+NSTEMI_S <- read_sav("Data/NSTEMI Final File (With Gender!) 25.4.23.sav")
 
-You can also embed plots, for example:
+Max_FU_Date = as.POSIXct("2021-03-31", tz = "London/Europe")
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+NSTEMI <- NSTEMI_S %>%
+  transmute(Study_ID = as.numeric(STUDY_ID),
+            HospitalNumber = as.numeric(HospitalNumber),
+            DCB_DES = factor(DCB1DES2, levels = 1:2, labels = c("DCB", "DES")),
+            Procedure_Start = as.POSIXct(PlannedProcedureDatex, tz = "London/Europe"),
+            Duration_Procedure =  as.numeric(Durationofprocedure),
+            Age = as.numeric(Ageatprocedure),
+            Sex = factor(GenderMale1Female2, levels = 1:2, labels = c("Male", "Female")),
+            Access = factor(Access.Radial1ulnar2femoral3, levels = 1:3, labels = c("Radial", "Ulna", "Femoral")),
+            Pressure_Wire = factor(Pressurewire1, levels = 0:1, labels = c("No", "Yes")),
+            Imaging = factor(Imaging.IVUS1OCT2, levels = 1:2, labels = c("IVUS", "OCT")),
+            PMHx_Hyperchol = factor(Hypercholesterolaemiafalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_HTN = factor(Hypertensionfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_PVD = factor(Peripheralvasculardiseasefalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_CVE = factor(Cerebrovasculareventfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_Transplant = factor(Cardiactransplantfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_MI = factor(MIfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_PCI = factor(PCIfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_CABG = factor(CABGfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_HF = factor(HeartFailurefalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_AF = factor(AF, levels = 0:1, labels = c("No", "Yes")),
+            FHx_CAD = factor(FamilyHistoryofCADfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_COPD = factor(COPDfalse0true1, levels = 0:1, labels = c("No", "Yes")),
+            PMHx_DM = factor(Diabetesno0yes1, levels = 0:1, labels = c("No", "Yes")),
+            Smok_Stat = factor(smokingstatusneversmoked0currentexsmoker1, levels = 0:1, labels = c("Never Smoked", "Current/Ex Smoker")),
+            GFR = as.numeric(parse_number(ResulteGFR)),
+            Creatinine = as.numeric(CreatinineLevel245),
+            Vessel_Tx = factor(VesseltreatedinnumbersLMS1LAD2LCx3RCA4Graft5, levels = 1:5, labels = c("LMS", "LAD", "LCx", "RCA", "Graft")),
+            LMSLAD_VesselTx = factor(case_when(Vessel_Tx == "LMS|LAD" ~ 1, T ~ 0), levels = 0:1, labels = c("No", "LMS/LAD")),
+            LMS_VesselTx = factor(case_when(Vessel_Tx == "LMS" ~ 1, T ~ 0), levels = 0:1, labels = c("No", "LMS")),
+            Multivessel_VesselTx = factor(MultivesselPCI, levels = 0:1, labels = c("No", "Multivessel PCI")),
+            denovo_VesselDiam = as.numeric(Vesseldiameter),
+            denovo_LesionLgth = as.numeric(LesionLength),
+            Vessel_GT3mm = factor(case_when(denovo_LesionLgth >30 ~ 1, T ~ 0), levels = 0:1, labels = c("No", "Yes")),
+            Tash_Bif = factor(Bifurcation, levels = 0:1, labels = c("No", "Yes")),
+            Coronary_Dissection = factor(Dissectionno_0A_1B_2C_3, levels = 1:3, labels = c("Type A", "Type B", "Type C")),
+            Frailty_Sc = as.numeric(frailty),
+            Frailty_Bin = factor(group, levels = 0:1, labels = c("Not Frail", "Frail")),
+            Heavy_Calc = factor(Heavycalcification, levels = 0:1, labels = c("No", "Yes")),
+            Diffuse_Dx = factor(Diffusedisease, levels = 0:1, labels = c("No", "Yes")),
+            Tortuosity = factor(Tortuosity, levels = 0:1, labels = c("No", "Yes")),
+            Hb = as.numeric(parse_number(Haemoglobin)),
+            Lym = as.numeric(ResultLymphocytes),
+            Neu = as.numeric(ResultNeutrophils),
+            WBC = as.numeric(Neu+Lym),
+            Creatinine = as.numeric(CreatinineLevel245),
+            Anaemia_Acuity = case_when(Sex == "Male" & Hb < 130 ~ 6,
+                                  Sex == "Female" & Hb < 120 ~ 6,
+                                  TRUE ~ 0),
+            Gender_Acuity = case_when(Sex == "Male" ~ 0,
+                                      Sex == "Female" ~ 8,
+                                      TRUE ~ NA_real_),
+            Age_Acuity = case_when(Age < 50 ~ 0,
+                                   Age>=50 & Age<60 ~ 3,
+                                   Age>=60 & Age<70 ~ 6,
+                                   Age>=70 & Age<80 ~ 9,
+                                   Age>= 80 ~ 12,
+                                   TRUE ~ NA_real_),
+            Creatinine_Acuity = case_when(Creatinine < 1.0 ~ 0,
+                                          Creatinine>=1.0 & Creatinine<1.2 ~ 2,
+                                          Creatinine>=1.2 & Creatinine<1.4 ~ 3,
+                                          Creatinine>=1.4 & Creatinine<1.6 ~ 5,
+                                          Creatinine>=1.6 & Creatinine<1.8 ~ 6,
+                                          Creatinine>=1.8 & Creatinine<2.0 ~ 8,
+                                          Creatinine>=2.0 ~ 10,
+                                          TRUE ~ NA_real_),
+            WBC_Acuity = case_when(WBC < 10 ~ 0,
+                                   WBC>=10 & WBC<12 ~ 2,
+                                   WBC>=12 & WBC<14 ~ 3,
+                                   WBC>=14 & WBC<16 ~ 5,
+                                   WBC>=16 & WBC<18 ~ 6,
+                                   WBC>=18 & WBC<20 ~ 8,
+                                   WBC>=20 ~ 10,
+                                   TRUE ~ NA_real_),
+            Presentation_Acuity = case_when(TRUE ~ 6),
+            Antithrombotic_Acuity = case_when(TRUE ~ 0),
+            Acuity_Sc = Anaemia_Acuity + Gender_Acuity + Age_Acuity + Creatinine_Acuity + WBC_Acuity + Presentation_Acuity + Antithrombotic_Acuity,
+            Max_FU = as.numeric(difftime(Max_FU_Date, Procedure_Start, units = "days")),
+            Mortality = as.numeric(Death),
+            Mortality_FU = as.numeric(TimetoMortality),
+            Mortality_FU365 = pmin(Mortality_FU, 365),
+            Mortality_365 = case_when(Mortality_FU365 < 365 & Mortality == 1 ~ 1,
+                                      TRUE ~ 0),
+            Mortality_FU30 = pmin(Mortality_FU, 30),
+            Mortality_30 = case_when(Mortality_FU30 < 30 & Mortality == 1 ~ 1,
+                                      TRUE ~ 0),
+            CV_Mortality = as.numeric(Cardiacdeath),
+            CV_Mortality_FU = case_when(CV_Mortality == 1 ~ Mortality_FU,
+                                     TRUE ~ Max_FU),
+            CV_Mortality_FU365 = pmin(CV_Mortality_FU, 365),
+            CV_Mortality_365 = case_when(CV_Mortality_FU365 < 365 & CV_Mortality == 1 ~ 1,
+                                      TRUE ~ 0),
+            CV_Mortality_FU30 = pmin(CV_Mortality_FU, 30),
+            CV_Mortality_30 = case_when(CV_Mortality_FU30 < 30 & CV_Mortality == 1 ~ 1,
+                                      TRUE ~ 0),
+            TIA = as.numeric(CVA),
+            TIA_FU = as.numeric(TimetoCVA),
+            TIA_FU365 = pmin(TIA_FU, 365),
+            TIA_365 = case_when(TIA_FU365 < 365 & TIA == 1 ~ 1,
+                                      TRUE ~ 0),
+            TIA_FU30 = pmin(TIA_FU, 30),
+            TIA_30 = case_when(TIA_FU30 < 30 & TIA == 1 ~ 1,
+                                      TRUE ~ 0),
+            
+            ACS = as.numeric(ACS),
+            ACS_FU = as.numeric(TimetoACS),
+            ACS_FU365 = pmin(ACS_FU, 365),
+            ACS_365 = case_when(ACS_FU365 < 365 & ACS == 1 ~ 1,
+                                      TRUE ~ 0),
+            ACS_FU30 = pmin(ACS_FU, 30),
+            ACS_30 = case_when(ACS_FU30 < 30 & ACS == 1 ~ 1,
+                                      TRUE ~ 0),
+            
+            MajBleeding = as.numeric(Bleeding),
+            MajBleeding_FU = as.numeric(TimetoBleeding),
+            MajBleeding_FU365 = pmin(MajBleeding_FU, 365),
+            MajBleeding_365 = case_when(MajBleeding_FU365 < 365 & MajBleeding == 1 ~ 1,
+                                      TRUE ~ 0),
+            MajBleeding_FU30 = pmin(MajBleeding_FU, 30),
+            MajBleeding_30 = case_when(MajBleeding_FU30 < 30 & MajBleeding == 1 ~ 1))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r Normality Testing}
+NumVar <- NSTEMI %>%
+  select(where(is.numeric)) %>%
+  select(3:21, -ends_with("Acuity")) %>%
+  names() %>%
+  syms()
+
+Shapiro_Test <- NSTEMI %>%
+  shapiro_test(vars = NumVar) 
+
+NormallyDistVars <- Shapiro_Test %>%
+  filter(p >= 0.05) %>%
+  pull(variable) 
+
+NonNormallyDistVars <- Shapiro_Test %>%
+  filter(p < 0.05) %>%
+  pull(variable) 
+
+non_normal_densityplots <- list()
+non_normal_qqplots <- list()
+
+for (i in 1:length(NonNormallyDistVars)) {
+  
+  non_normal_densityplots[[i]] <- NSTEMI %>%
+  ggdensity(NonNormallyDistVars[i], fill = "lightgray") 
+  
+  non_normal_qqplots[[i]] <- NSTEMI %>%
+  ggqqplot(NonNormallyDistVars[i], fill = "lightgray") 
+  
+}
+
+ggexport(plotlist = non_normal_densityplots, filename = "Normality_Testing/density.pdf",
+         nrow = 2, ncol = 2)
+
+ggexport(plotlist = non_normal_qqplots, filename = "Normality_Testing/qq.pdf",
+         nrow = 2, ncol = 2)
+
+NormallyDistVars <-  c()
+```
+
+```{r Table 1}
+
+NSTEMI_Table <- NSTEMI %>%
+  select(-ends_with("Acuity"))
+
+Baseline_T <- tbl_summary(NSTEMI_Table,
+            by = DCB_DES) %>%
+  add_p() %>%
+  bold_p() %>%
+  add_overall() %>%
+  gtsummary::separate_p_footnotes() %>%
+  as_gt() 
+
+gtsave(Baseline_T, "Table1/BaselineT.html")
+```
+
+```{r Univariate Tables}
+UV_T <- list()
+
+Outcomes <- c("Mortality", "CV_Mortality", "ACS", "MajBleeding", "TIA")
+Followups <- c("Mortality_FU", "CV_Mortality_FU", "ACS_FU", "MajBleeding_FU", "TIA_FU")
+
+doParallel::registerDoParallel()
+
+foreach(i = 1:5) %dopar% {
+
+UV_T[[i]] <- tbl_uvregression(NSTEMI,
+                 method = coxph,
+                 y = Surv(time = !!sym(Followups[i]), event = !!sym(Outcomes[i])),
+                 exponentiate = T,
+                 include = c(DCB_DES, Age, Sex, dplyr::starts_with("PMHx"), FHx_CAD, Smok_Stat, GFR, Creatinine, Vessel_Tx, LMSLAD_VesselTx, LMS_VesselTx, Multivessel_VesselTx, denovo_VesselDiam, denovo_LesionLgth, Vessel_GT3mm, Tash_Bif, Coronary_Dissection, Frailty_Sc, Frailty_Bin, Heavy_Calc, Hb, Lym, Neu, WBC, ends_with("Acuity"), Acuity_Sc)) %>%
+  modify_header(label = paste0("**",Outcomes[i],"**", " (Univariate)")) %>%
+  bold_p() %>%
+  as_gt()
+
+gtsave(UV_T[[i]], paste0("UV_Tables/" , Outcomes[i], "_UV.html"))
+
+}
+```
+
+```{r CumHaz Charts Part 1 (all, 365, 30)}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring CVA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "Cum_Haz_Plots_UnMatched/CumHazPlots.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI)
+plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI)
+plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI)
+plot5<- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring CVA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")
+
+
+cairo_pdf(filename = "Cum_Haz_Plots_UnMatched/CumHazPlots365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI)
+plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI)
+plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = NSTEMI)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365,TIA_365) ~ DCB_DES, data = NSTEMI)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+cairo_pdf(filename = "Cum_Haz_Plots_UnMatched/CumHazPlots30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz Charts Bifurcation Y Part 2 (all, 365, 30)}
+NSTEMI_Bif <- NSTEMI %>%
+  filter(Tash_Bif == "Yes")
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_Bif)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_Bif)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_Bif)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_Bif)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_Bif)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Bif_True/CumHazPlots_Bif.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Bif_True/CumHazPlots_Bif_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+
+
+cairo_pdf(filename = "CumHazPlots_Bif_True/CumHazPlots_Bif_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz Bifurcation N Part 3 (all, 365, 30)}
+NSTEMI_Bif <- NSTEMI %>%
+  filter(Tash_Bif == "No")
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_Bif)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_Bif)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_Bif)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_Bif)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_Bif)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Bif_False/CumHazPlots_Bif_No.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_Bif)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Bif_False/CumHazPlots_Bif_No_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_Bif)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+
+cairo_pdf(filename = "CumHazPlots_Bif_False/CumHazPlots_Bif_No_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz GTE3 length Y Part 4 (all, 365, 30)}
+NSTEMI_GT3mm <- NSTEMI %>%
+  filter(Vessel_GT3mm == "Yes")
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT3mm_True/CumHazPlots_GT3mm.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT3mm_True/CumHazPlots_GT3mm_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT3mm_True/CumHazPlots_GT3mm_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz GTE3 length N Part 5 (all, 365, 30)}
+NSTEMI_GT3mm <- NSTEMI %>%
+  filter(Vessel_GT3mm == "No")
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT3mm_False/CumHazPlots_GT3mm_No.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT3mm_False/CumHazPlots_GT3mm_No_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_GT3mm)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT3mm_False/CumHazPlots_GT3mm_No_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz Male Part 4 (all, 365, 30)}
+NSTEMI_Sex <- NSTEMI %>%
+  filter(Sex == "Male")
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_Sex)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_Sex)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_Sex)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_Sex)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_Sex)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Male/CumHazPlots_Male.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Male/CumHazPlots_Male_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Male/CumHazPlots_Male_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz Female Part 5 (all, 365, 30)}
+NSTEMI_Sex <- NSTEMI %>%
+  filter(Sex == "Female")
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_Sex)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_Sex)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_Sex)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_Sex)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_Sex)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Female/CumHazPlots_Female.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_Sex)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Female/CumHazPlots_Female_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_Sex)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_Female/CumHazPlots_Female_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+#print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz Age >65 Part 4 (all, 365, 30)}
+NSTEMI_Age <- NSTEMI %>%
+  filter(Age >= 65)
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_Age)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_Age)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_Age)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_Age)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_Age)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT65_True/CumHazPlots_GT65.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_Age)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_Age)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_Age)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_Age)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_Age)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT65_True/CumHazPlots_GT65_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_Age)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_Age)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_Age)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = NSTEMI_Age)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_Age)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT65_True/CumHazPlots_GT65_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r Cum Haz Age <65 Part 5 (all, 365, 30)}
+NSTEMI_Age <- NSTEMI %>%
+  filter(Age < 65)
+
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = NSTEMI_Age)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = NSTEMI_Age)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = NSTEMI_Age)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = NSTEMI_Age)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = NSTEMI_Age)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT65_False/CumHazPlots_GT65.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = NSTEMI_Age)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = NSTEMI_Age)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = NSTEMI_Age)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = NSTEMI_Age)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = NSTEMI_Age)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT65_False/CumHazPlots_GT65_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = NSTEMI_Age)
+plot1 <- ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = NSTEMI_Age)
+plot2 <- ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = NSTEMI_Age)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = NSTEMI_Age)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.2), legend.title = "")  
+
+cairo_pdf(filename = "CumHazPlots_GT65_False/CumHazPlots_GT65_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot5)
+dev.off()
+```
+
+```{r Multivariate for All Cause}
+NSTEMI_Mort <- NSTEMI %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU) %>%
+  drop_na()
+
+res.cox1a <- coxph(Surv(Mortality_FU+ Mortality) ~ DCB_DES +  Age + PMHx_PVD + PMHx_CVE + PMHx_MI + PMHx_PCI + PMHx_CABG + PMHx_HF + PMHx_AF + FHx_CAD + PMHx_COPD + PMHx_DM + GFR + LMS_VesselTx + Multivessel_VesselTx + Frailty_Sc + Heavy_Calc + Acuity_Sc, data =  NSTEMI_Mort)
+
+step_reg <- step(res.cox1a, direction='both', scope=list(lower = Surv(Mortality_FU + Mortality) ~ DCB_DES, upper = formula(res.cox1a)), trace=0)
+
+
+MV_T <- tbl_regression(step_reg, 
+               exponentiate = T, 
+               #show_single_row = c(DCB_DES, PMHx_CVE, PMHx_HF, FHx_CAD),
+               #label = list(DCB_DES ~ "DCB/DES [DES]",
+                       #      PMHx_CVE ~ "History of Cerebrovascular Events",
+                       #      PMHx_HF ~ "History of Heart Failure",
+                       #      FHx_CAD ~ "Family History of Coronary Artery Disease",
+                       #      GFR ~ "eGFR",
+                          #   Frailty_Sc ~ "Frailty Score")
+               ) %>%
+  bold_p() %>%
+  modify_header(label = "All-Cause Mortality (Multivariate)") %>%
+  add_n() %>%
+  as_gt()
+
+gtsave(MV_T, "MV_Tables/Multivariate-Mortality.html")
+```
+
+```{r PS Matching (All)}
+NSTEMI_PS_Mort <- NSTEMI %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_All.csv")
+
+df.match_All <- df.match1
+```
+
+```{r PS Matching (Bifur T)}
+NSTEMI2 <- NSTEMI %>%
+  filter(Tash_Bif == "Yes")
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/CumHazPlots.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_BifY.csv")
+
+df.match1_BifT <- df.match1
+```
+
+```{r PS Matching (Bifur F)}
+
+NSTEMI2 <- NSTEMI %>%
+  filter(Tash_Bif == "No")
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All_BifF.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_BifF.csv")
+
+df.match1_BifF <- df.match1
+```
+
+```{r PS Matching (GT3mm T)}
+NSTEMI2 <- NSTEMI %>%
+  filter(Vessel_GT3mm == "Yes")
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All_GT3mmT.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_GT3mmT.csv")
+
+df.match1_GT3mmT <- df.match1
+```
+
+```{r PS Matching (GT3mm F)}
+
+NSTEMI2 <- NSTEMI %>%
+  filter(Vessel_GT3mm == "No")
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All_GT3mmF.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_GT3mmF.csv")
+
+df.match1_GT3mmF <- df.match1
+```
+
+```{r PS Matching (Male)}
+
+NSTEMI2 <- NSTEMI %>%
+  filter(Sex == "Male")
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All_Male.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_Male.csv")
+
+df.match1_Male <- df.match1
+```
+
+```{r PS Matching (Female)}
+
+NSTEMI2 <- NSTEMI %>%
+  filter(Sex == "Female")
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All_Female.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_Female.csv")
+
+df.match1_Female <- df.match1
+```
+
+```{r PS Matching (GT65)}
+
+NSTEMI2 <- NSTEMI %>%
+  filter(Age >= 65)
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All_GT65.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_GT65.csv")
+
+df.match1_GT65 <- df.match1
+```
+
+```{r PS Matching (LT65)}
+
+NSTEMI2 <- NSTEMI %>%
+  filter(Age < 65)
+
+NSTEMI_PS_Mort <- NSTEMI2 %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
+  drop_na(1:18)
+
+set.seed(1234)
+
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+a <- summary(match.it)
+
+#verify match 
+Match1 <- plot(match.it, type = 'jitter', interactive = F)
+
+Match2 <- plot(match.it, type = "density", interactive = FALSE,
+     which.xs = ~Age)
+
+#create new dataframe without unmatched
+df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+
+cairo_pdf(filename = "Matching_Files/Match_All_LT65.pdf",
+         width = 6, height = 6, onefile = T)
+print(Match1, newpage = F)
+print(Match2)
+dev.off()
+
+write_csv(df.match1, "Data/PS_Match_LT65.csv")
+
+df.match1_LT65 <- df.match1
+```
+
+```{r MultiVariate Mortality PSMatched}
+NSTEMI_Mort <- df.match1_All %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU) %>%
+  drop_na()
+
+res.cox1a <- coxph(Surv(Mortality_FU+ Mortality) ~ DCB_DES +Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data =  NSTEMI_Mort)
+
+backward <- step(res.cox1a, direction='both', scope=list(lower = Surv(Mortality_FU + Mortality) ~ DCB_DES, upper = formula(res.cox1a)), trace=0)
+
+
+MV_T <- tbl_regression(backward, 
+               exponentiate = T, 
+               #show_single_row = c(DCB_DES, Tash_Bif, PMHx_HF, FHx_CAD), 
+              # label = list(DCB_DES ~ "DCB/DES",
+                    #        PMHx_HF ~ "History of Heart Failure",
+                    #        FHx_CAD ~ "Familt History of Coronary Artery Disease",
+                      #      Tash_Bif ~ "Bifurcations",
+                     #       Frailty_Sc ~ "Frailty Score",
+                      #      Acuity_Sc ~ "Acuity Score")
+              ) %>%
+  bold_p() %>%
+  modify_header(label = "All-Cause Mortality (Multivariate)") %>%
+  add_n() %>%
+  as_gt()
+
+gtsave(MV_T, "Multivariate/Multivariate-Mortality-PS.html")
+
+```
+
+```{r PS Matched CumHaz Plots All}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_All)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_All)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_All)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_All)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_All)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched/PS_CumHazPlots.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_All)
+plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_All)
+plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_All)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_All)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_All)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched/PS_CumHazPlots365.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_All)
+plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_All)
+plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_All)
+plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_All)
+plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_All)
+plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched/PS_CumHazPlots30.pdf",
+         width = 6, height = 6, onefile = T)
+print(plot1, newpage = F)
+print(plot2)
+print(plot3)
+print(plot4)
+print(plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots Bifur T}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_BifT)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_BifT)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_BifT)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_BifT)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_BifT)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifT/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_BifT)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_BifT)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_BifT)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_BifT)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_BifT)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifT/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_BifT)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_BifT)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_BifT)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_BifT)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_BifT)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifT/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots Bifur F}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_BifF)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_BifF)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_BifF)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_BifF)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_BifF)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifF/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_BifF)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_BifF)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_BifF)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_BifF)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_BifF)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifF/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_BifF)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_BifF)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_BifF)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_BifF)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_BifF)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifF/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots GT3mm T}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_T/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_T/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_GT3mmT)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_T/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots GT3mm F}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_F/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_F/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_GT3mmF)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_F/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots Male}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_Male)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_Male)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_Male)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_Male)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_Male)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_Male)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_Male)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_Male)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_Male)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_Male)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_Male)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_Male)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_Male)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_Male)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_Male)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots Female}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_Female)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_Female)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_Female)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_Female)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_Female)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_Female)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_Female)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_Female)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_Female)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_Female)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_Female)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_Female)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_Female)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_Female)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_Female)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots GT65}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_GT65)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_GT65)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_GT65)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_GT65)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_GT65)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_GT65)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_GT65)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_GT65)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_GT65)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_GT65)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_GT65)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_GT65)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_GT65)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_GT65)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_GT65)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
+```{r PS Matched CumHaz Plots LT65}
+fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match1_LT65)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU, CV_Mortality) ~ DCB_DES, data = df.match1_LT65)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU, ACS) ~ DCB_DES, data = df.match1_LT65)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU, MajBleeding) ~ DCB_DES, data = df.match1_LT65)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU, TIA) ~ DCB_DES, data = df.match1_LT65)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+  
+fit1<- survfit(Surv(Mortality_FU365, Mortality_365) ~ DCB_DES, data = df.match1_LT65)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU365, CV_Mortality_365) ~ DCB_DES, data = df.match1_LT65)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU365, ACS_365) ~ DCB_DES, data = df.match1_LT65)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU365, MajBleeding_365) ~ DCB_DES, data = df.match1_LT65)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU365, TIA_365) ~ DCB_DES, data = df.match1_LT65)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_m", legend.labs = c("DCB", "DES"), xlab = "Months Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 60.875, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_365.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+
+fit1<- survfit(Surv(Mortality_FU30, Mortality_30) ~ DCB_DES, data = df.match1_LT65)
+ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit2<- survfit(Surv(CV_Mortality_FU30, CV_Mortality_30) ~ DCB_DES, data = df.match1_LT65)
+ps_plot2 <-ggsurvplot(fit2, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Cardiovascular Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "") 
+
+fit3<- survfit(Surv(ACS_FU30, ACS_30) ~ DCB_DES, data = df.match1_LT65)
+ps_plot3 <- ggsurvplot(fit3, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Incurring ACS", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit4<- survfit(Surv(MajBleeding_FU30, MajBleeding_30) ~ DCB_DES, data = df.match1_LT65)
+ps_plot4 <- ggsurvplot(fit4, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Major Bleed", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+fit5<- survfit(Surv(TIA_FU30, TIA_30) ~ DCB_DES, data = df.match1_LT65)
+ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), legend.labs = c("DCB", "DES"), xlab = "Days Since Index Procedure", ylab = "Probability of Having a Stroke/TIA", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 5, pval.coord = c(0,0.1), legend.title = "")  
+
+cairo_pdf(filename = "PS_CumHazPlots_GT3_True/PS_CumHazPlots_GT3_30.pdf",
+         width = 6, height = 6, onefile = T)
+print(ps_plot1, newpage = F)
+print(ps_plot2)
+print(ps_plot3)
+print(ps_plot4)
+print(ps_plot5)
+dev.off()
+```
+
