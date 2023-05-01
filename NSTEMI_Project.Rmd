@@ -229,11 +229,18 @@ UV_T <- list()
 Outcomes <- c("Mortality", "CV_Mortality", "ACS", "MajBleeding", "TIA")
 Followups <- c("Mortality_FU", "CV_Mortality_FU", "ACS_FU", "MajBleeding_FU", "TIA_FU")
 
-doParallel::registerDoParallel()
+library(doFuture)
+registerDoFuture()
+plan(multisession)
 
 foreach(i=1:5, .packages = c("foreach", "tidyverse", "gtsummary")) %dopar% {
+  
+theme_gtsummary_journal(journal = "jama")
+#> Setting theme `JAMA`
+theme_gtsummary_compact()
+#> Setting theme `Compact`
 
-UV_T[[i]] <- gtsummary::tbl_uvregression(NSTEMI,
+.GlobalEnv$UV_T[[i]] <- gtsummary::tbl_uvregression(NSTEMI,
                  method = survival::coxph,
                  y = survival::Surv(time = !!sym(Followups[i]), event = !!sym(Outcomes[i])),
                  exponentiate = T,
@@ -242,7 +249,7 @@ UV_T[[i]] <- gtsummary::tbl_uvregression(NSTEMI,
   bold_p() %>%
   as_gt()
 
-gt::gtsave(UV_T[[i]], paste0("UV_Tables/" , Outcomes[i], "_UV.html"))
+gt::gtsave(.GlobalEnv$UV_T[[i]], paste0("UV_Tables/" , Outcomes[i], "_UV.html"))
 
 }
 ```
