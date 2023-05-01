@@ -1092,7 +1092,7 @@ set.seed(123)
 
 res.cox <- future_map(Outcomes, ~coxph(as.formula(paste0("Surv(time = ",.x ,"_FU", ", event = ", .x, ") ~  DCB_DES +  Age + PMHx_PVD + PMHx_CVE + PMHx_MI + PMHx_PCI + PMHx_CABG + PMHx_HF + PMHx_AF + FHx_CAD + PMHx_COPD + PMHx_DM + GFR + LMS_VesselTx + Multivessel_VesselTx + Frailty_Sc + Heavy_Calc + Acuity_Sc")), data =  NSTEMI_Mort)) 
 
-step_reg <- future_map(1:5, ~stats::step(res.cox[[.x]], direction='both', scope=list(lower = Surv(time = !!sym(Followups[.x]), event = !!sym(Outcomes[.x])) ~ DCB_DES, upper = stats::formula(res.cox[[.x]])), trace=0))
+step_reg <- map(1:5, ~stats::step(res.cox[[.x]], direction='both', scope=list(lower = Surv(time = !!sym(Followups[.x]), event = !!sym(Outcomes[.x])) ~ DCB_DES, upper = stats::formula(res.cox[[.x]])), trace=0))
 
 MV_T <- map(1:5, ~gtsummary::tbl_regression(step_reg[[.x]], 
                exponentiate = T, 
