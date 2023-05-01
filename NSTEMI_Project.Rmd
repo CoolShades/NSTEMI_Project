@@ -231,7 +231,7 @@ Followups <- c("Mortality_FU", "CV_Mortality_FU", "ACS_FU", "MajBleeding_FU", "T
 
 doParallel::registerDoParallel()
 
-foreach(i=1:5, .packages = c("tidyverse", "gtsummary", "survival", "gt", "dplyr")) %dopar% {
+foreach(i=1:5, .packages = c("foreach", "tidyverse", "gtsummary")) %dopar% {
 
 UV_T[[i]] <- gtsummary::tbl_uvregression(NSTEMI,
                  method = survival::coxph,
@@ -1067,17 +1067,27 @@ print(plot5)
 dev.off()
 ```
 
-```{r Multivariate for All Cause}
+```{r Multivariate for All Outcomes}
+library(furrr)
+
+MV_T <- list()
+
+Outcomes <- c("Mortality", "CV_Mortality", "ACS", "MajBleeding", "TIA")
+Followups <- c("Mortality_FU", "CV_Mortality_FU", "ACS_FU", "MajBleeding_FU", "TIA_FU")
+
+doParallel::registerDoParallel()
+
 NSTEMI_Mort <- NSTEMI %>%
-  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU) %>%
+  select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, CV_Mortality, CV_Mortality_FU, ACS, ACS_FU, MajBleeding, MajBleeding_FU, TIA, TIA_FU) %>%
   drop_na()
 
-res.cox1a <- coxph(Surv(Mortality_FU+ Mortality) ~ DCB_DES +  Age + PMHx_PVD + PMHx_CVE + PMHx_MI + PMHx_PCI + PMHx_CABG + PMHx_HF + PMHx_AF + FHx_CAD + PMHx_COPD + PMHx_DM + GFR + LMS_VesselTx + Multivessel_VesselTx + Frailty_Sc + Heavy_Calc + Acuity_Sc, data =  NSTEMI_Mort)
+set.seed(123)  
 
-step_reg <- step(res.cox1a, direction='both', scope=list(lower = Surv(Mortality_FU + Mortality) ~ DCB_DES, upper = formula(res.cox1a)), trace=0)
+res.cox <- future_map(Outcomes, ~coxph(as.formula(paste0("Surv(time = ",.x ,"_FU", ", event = ", .x, ") ~  DCB_DES +  Age + PMHx_PVD + PMHx_CVE + PMHx_MI + PMHx_PCI + PMHx_CABG + PMHx_HF + PMHx_AF + FHx_CAD + PMHx_COPD + PMHx_DM + GFR + LMS_VesselTx + Multivessel_VesselTx + Frailty_Sc + Heavy_Calc + Acuity_Sc")), data =  NSTEMI_Mort)) 
 
+step_reg <- future_map(1:5, ~stats::step(res.cox[[.x]], direction='both', scope=list(lower = Surv(time = !!sym(Followups[.x]), event = !!sym(Outcomes[.x])) ~ DCB_DES, upper = stats::formula(res.cox[[.x]])), trace=0))
 
-MV_T <- tbl_regression(step_reg, 
+MV_T <- map(1:5, ~gtsummary::tbl_regression(step_reg[[.x]], 
                exponentiate = T, 
                #show_single_row = c(DCB_DES, PMHx_CVE, PMHx_HF, FHx_CAD),
                #label = list(DCB_DES ~ "DCB/DES [DES]",
@@ -1087,12 +1097,13 @@ MV_T <- tbl_regression(step_reg,
                        #      GFR ~ "eGFR",
                           #   Frailty_Sc ~ "Frailty Score")
                ) %>%
-  bold_p() %>%
-  modify_header(label = "All-Cause Mortality (Multivariate)") %>%
-  add_n() %>%
-  as_gt()
+  gtsummary::bold_p() %>%
+  gtsummary::modify_header(label = paste0("**",Outcomes[.x],"**", " (Multivariate)")) %>%
+  gtsummary::add_n() %>%
+  gtsummary::as_gt())
 
-gtsave(MV_T, "MV_Tables/Multivariate-Mortality.html")
+map(1:5, ~gt::gtsave(MV_T[[.x]], paste0("MV_Tables/" , Outcomes[.x], "_MV.html")))
+
 ```
 
 ```{r PS Matching (All)}
@@ -1102,7 +1113,7 @@ NSTEMI_PS_Mort <- NSTEMI %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1)
+match.it <- matchit(DCB_DES ~ Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="optimal", ratio=1, discard = "both")
 a <- summary(match.it)
 
 #verify match 
@@ -1112,7 +1123,7 @@ Match2 <- plot(match.it, type = "density", interactive = FALSE,
      which.xs = ~Age)
 
 #create new dataframe without unmatched
-df.match1 <- match.data(match.it)[1:ncol(NSTEMI_PS_Mort)]
+df.match1 <- match.data(match.it)
 
 cairo_pdf(filename = "Matching_Files/Match_All.pdf",
          width = 6, height = 6, onefile = T)
@@ -1400,12 +1411,9 @@ NSTEMI_Mort <- df.match_All %>%
   select(DCB_DES, Age, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU) %>%
   drop_na()
 
-res.cox1a <- coxph(Surv(Mortality_FU+ Mortality) ~ DCB_DES +Age+ PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data =  NSTEMI_Mort)
+res.cox1a <- coxph(Surv(time = Mortality_FU, event = Mortality) ~ DCB_DES, data =  NSTEMI_Mort)
 
-backward <- step(res.cox1a, direction='both', scope=list(lower = Surv(Mortality_FU + Mortality) ~ DCB_DES, upper = formula(res.cox1a)), trace=0)
-
-
-MV_T <- tbl_regression(backward, 
+MV_T <- tbl_regression(res.cox1a, 
                exponentiate = T, 
                #show_single_row = c(DCB_DES, Tash_Bif, PMHx_HF, FHx_CAD), 
               # label = list(DCB_DES ~ "DCB/DES",
@@ -1420,12 +1428,12 @@ MV_T <- tbl_regression(backward,
   add_n() %>%
   as_gt()
 
-gtsave(MV_T, "MV_Tables/Multivariate-Mortality-PS.html")
+gtsave(MV_T, "UV_Tables/Univariate-Mortality-PS.html")
 
 ```
 
 ```{r PS Matched CumHaz Plots All}
-fit1<- survfit(Surv(Mortality_FU, Mortality) ~ DCB_DES, data = df.match_All)
+fit1<- survfit(Surv(time = Mortality_FU, event = Mortality) ~ DCB_DES, data = df.match_All)
 ps_plot1 <-ggsurvplot(fit1, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
            risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of All-Cause Mortality", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "") 
 
