@@ -1131,14 +1131,31 @@ Logit distance assumes linearity in the log-odds relationship, which may not hol
 
 In summary, the choice between Mahalanobis distance and logit distance depends on factors such as the nature of the data, the presence of correlations between covariates, and the computational considerations. It is recommended to compare the results obtained using different distance metrics and assess their impact on the matching quality and treatment effect estimates to determine which distance metric performs better in a given analysis.
 
+```{r Searching for the variables to PS Match for}
+PS_Variable_Search <- NSTEMI %>%
+  drop_na(DCB_DES) %>%
+  select(-Study_ID, -HospitalNumber, -Procedure_Start, -Imaging, -LMSLAD_VesselTx)
+
+gtsummary::tbl_uvregression(NSTEMI_table,
+                 method = glm,
+                 method.args = list(family = binomial),
+                 y = DCB_DES,
+                 exponentiate = T) %>%
+  modify_header(label = paste0("**",Outcomes[i],"**", " (Univariate)")) %>%
+  bold_p() %>%
+  as_gt()
+
+PS_Variables = c("DCB_DES", "Duration_Procedure", "PMHx_AF", "FHx_CAD", "denovo_VesselDiam", "denovo_LesionLgth", "Tash_Bif", "Diffuse_Dx", "Tortuosity")
+```
+
 ```{r PS Matching (All)}
 NSTEMI_PS_Mort <- NSTEMI %>%
-  select(DCB_DES, Age, Sex, PMHx_PVD, PMHx_CVE, PMHx_MI, PMHx_PCI, PMHx_CABG, PMHx_HF, PMHx_AF, FHx_CAD, PMHx_COPD, PMHx_DM, GFR, LMS_VesselTx, Multivessel_VesselTx, Frailty_Sc, Heavy_Calc, Acuity_Sc, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30, Vessel_GT3mm, Tash_Bif) %>%
-  drop_na(1:19)
+  select(DCB_DES, Age, Sex, PMHx_AF, FHx_CAD, Tash_Bif, Diffuse_Dx, Tortuosity, denovo_LesionLgth, denovo_VesselDiam, Mortality, Mortality_FU, Mortality_FU365, Mortality_365, Mortality_FU30, Mortality_30, CV_Mortality, CV_Mortality_FU, CV_Mortality_FU365, CV_Mortality_365, CV_Mortality_FU30,CV_Mortality_30, ACS, ACS_FU, ACS_FU365, ACS_365, ACS_FU30, ACS_30, TIA, TIA_FU, TIA_FU365, TIA_365, TIA_FU30, TIA_30, MajBleeding, MajBleeding_FU, MajBleeding_FU365, MajBleeding_365, MajBleeding_FU30, MajBleeding_30) %>%
+  drop_na(1:10)
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_PVD+ PMHx_CVE+ PMHx_MI+ PMHx_PCI+ PMHx_CABG+ PMHx_HF+ PMHx_AF+ FHx_CAD+ PMHx_COPD+ PMHx_DM+ GFR+ LMS_VesselTx+ Multivessel_VesselTx+ Frailty_Sc+ Heavy_Calc+ Acuity_Sc, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
 a <- summary(match.it)
 
 #create new dataframe without unmatched
@@ -1329,7 +1346,7 @@ gtsave(MV_T, "UV_Tables/Univariate-Mortality-PS.html")
 ```{r Table 1 - PS Matched (Mortality)}
 
 NSTEMI_Table <- df.match_All %>%
-  select(-ends_with("Acuity"), -id)
+  select(-ends_with("Acuity"), -id, -subclass)
 
 Baseline_T <- tbl_summary(NSTEMI_Table,
             by = DCB_DES) %>%
