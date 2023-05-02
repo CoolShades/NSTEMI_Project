@@ -1155,7 +1155,7 @@ NSTEMI_PS_Mort <- NSTEMI %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 #create new dataframe without unmatched
@@ -1176,7 +1176,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 #create new dataframe without unmatched
@@ -1196,7 +1196,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 df.match1 <- get_matches(match.it)
@@ -1214,7 +1214,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 df.match1 <- get_matches(match.it)
@@ -1233,7 +1233,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 df.match1 <- get_matches(match.it)
@@ -1252,7 +1252,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 df.match1 <- get_matches(match.it)
@@ -1271,7 +1271,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 df.match1 <- get_matches(match.it)
@@ -1290,7 +1290,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 df.match1 <- get_matches(match.it)
@@ -1309,7 +1309,7 @@ NSTEMI_PS_Mort <- NSTEMI2 %>%
 
 set.seed(1234)
 
-match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort, method="nearest", distance = "mahalanobis", replace = T)
+match.it <- matchit(DCB_DES ~ Age+ Sex + PMHx_AF+ FHx_CAD+ Tash_Bif+ Diffuse_Dx+ Tortuosity+ denovo_LesionLgth+ denovo_VesselDiam, data = NSTEMI_PS_Mort,  method="genetic", replace = T,  pop.size = 500)
 a <- summary(match.it)
 
 df.match1 <- get_matches(match.it)
