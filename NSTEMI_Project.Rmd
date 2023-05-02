@@ -290,7 +290,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_UnMatched/CumHazPlots.pdf",
          width = 6, height = 6, onefile = T)
@@ -324,7 +324,7 @@ plot5<- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "Cum_Haz_Plots_UnMatched/CumHazPlots365.pdf",
@@ -359,7 +359,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_UnMatched/CumHazPlots30.pdf",
          width = 6, height = 6, onefile = T)
@@ -398,7 +398,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_Bif)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Bif_True/CumHazPlots_Bif.pdf",
          width = 6, height = 6, onefile = T)
@@ -432,7 +432,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_Bif)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Bif_True/CumHazPlots_Bif_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -466,7 +466,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_Bif)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "CumHazPlots_Bif_True/CumHazPlots_Bif_30.pdf",
@@ -506,7 +506,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_Bif)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Bif_False/CumHazPlots_Bif_No.pdf",
          width = 6, height = 6, onefile = T)
@@ -540,7 +540,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_Bif)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Bif_False/CumHazPlots_Bif_No_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -574,7 +574,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_Bif)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Bif_False/CumHazPlots_Bif_No_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -613,7 +613,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_GT3mm)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_GT3mm_True/CumHazPlots_GT3mm.pdf",
          width = 6, height = 6, onefile = T)
@@ -647,7 +647,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_GT3mm)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "CumHazPlots_GT3mm_True/CumHazPlots_GT3mm_365.pdf",
@@ -682,7 +682,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_GT3mm)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "CumHazPlots_GT3mm_True/CumHazPlots_GT3mm_30.pdf",
@@ -722,7 +722,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_GT3mm)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "CumHazPlots_GT3mm_False/CumHazPlots_GT3mm_No.pdf",
@@ -757,7 +757,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_GT3mm)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "CumHazPlots_GT3mm_False/CumHazPlots_GT3mm_No_365.pdf",
@@ -792,7 +792,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_GT3mm)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "CumHazPlots_GT3mm_False/CumHazPlots_GT3mm_No_30.pdf",
@@ -806,7 +806,7 @@ print(plot6)
 dev.off()
 ```
 
-```{r Cum Haz Male Part 4 (all, 365, 30)}
+```{r Cum Haz Male Part 6 (all, 365, 30)}
 NSTEMI_Sex <- NSTEMI %>%
   filter(Sex == "Male")
 
@@ -832,7 +832,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_Sex)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 
 cairo_pdf(filename = "CumHazPlots_Male/CumHazPlots_Male.pdf",
@@ -867,7 +867,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_Sex)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Male/CumHazPlots_Male_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -901,7 +901,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_Sex)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Male/CumHazPlots_Male_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -914,7 +914,7 @@ print(plot6)
 dev.off()
 ```
 
-```{r Cum Haz Female Part 5 (all, 365, 30)}
+```{r Cum Haz Female Part 7 (all, 365, 30)}
 NSTEMI_Sex <- NSTEMI %>%
   filter(Sex == "Female")
 
@@ -940,7 +940,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_Sex)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Female/CumHazPlots_Female.pdf",
          width = 6, height = 6, onefile = T)
@@ -974,7 +974,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_Sex)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Female/CumHazPlots_Female_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -1004,7 +1004,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_Sex)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_Female/CumHazPlots_Female_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -1017,7 +1017,7 @@ print(plot6)
 dev.off()
 ```
 
-```{r Cum Haz Age >65 Part 4 (all, 365, 30)}
+```{r Cum Haz Age >65 Part 8 (all, 365, 30)}
 NSTEMI_Age <- NSTEMI %>%
   filter(Age >= 65)
 
@@ -1043,7 +1043,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_Age)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_GT65_True/CumHazPlots_GT65.pdf",
          width = 6, height = 6, onefile = T)
@@ -1077,7 +1077,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_Age)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_GT65_True/CumHazPlots_GT65_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -1111,7 +1111,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_Age)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_GT65_True/CumHazPlots_GT65_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -1124,7 +1124,7 @@ print(plot6)
 dev.off()
 ```
 
-```{r Cum Haz Age <65 Part 5 (all, 365, 30)}
+```{r Cum Haz Age <65 Part 9 (all, 365, 30)}
 NSTEMI_Age <- NSTEMI %>%
   filter(Age < 65)
 
@@ -1150,7 +1150,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = NSTEMI_Age)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_GT65_False/CumHazPlots_GT65.pdf",
          width = 6, height = 6, onefile = T)
@@ -1184,7 +1184,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = NSTEMI_Age)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_GT65_False/CumHazPlots_GT65_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -1214,7 +1214,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = NSTEMI_Age)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "CumHazPlots_GT65_False/CumHazPlots_GT65_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -1534,7 +1534,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match_All)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched/PS_CumHazPlots.pdf",
          width = 6, height = 6, onefile = T)
@@ -1568,7 +1568,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match_All)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched/PS_CumHazPlots365.pdf",
          width = 6, height = 6, onefile = T)
@@ -1602,7 +1602,7 @@ plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match_All)
 plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched/PS_CumHazPlots30.pdf",
          width = 6, height = 6, onefile = T)
@@ -1638,7 +1638,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_BifT)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifT/PS_CumHazPlots_BifT.pdf",
          width = 6, height = 6, onefile = T)
@@ -1672,7 +1672,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_BifT)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifT/PS_CumHazPlots_BifT_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -1702,7 +1702,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match1_BifT)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifT/PS_CumHazPlots_BifT_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -1737,7 +1737,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_BifF)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifF/PS_CumHazPlots_BifF.pdf",
          width = 6, height = 6, onefile = T)
@@ -1771,7 +1771,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_BifF)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifF/PS_CumHazPlots_BifF_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -1802,7 +1802,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match1_BifF)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_BifF/PS_CumHazPlots_BifF_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -1837,7 +1837,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_GT3mmT)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_T/PS_CumHazPlots_GT3T.pdf",
          width = 6, height = 6, onefile = T)
@@ -1871,7 +1871,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_GT3mmT)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_T/PS_CumHazPlots_GT3T_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -1901,7 +1901,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match1_GT3mmT)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_T/PS_CumHazPlots_GT3T_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -1936,7 +1936,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_GT3mmF)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_F/PS_CumHazPlots_GT3F.pdf",
          width = 6, height = 6, onefile = T)
@@ -1970,7 +1970,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_GT3mmF)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_F/PS_CumHazPlots_GT3F_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -2004,7 +2004,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match1_GT3mmF)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT3mm_F/PS_CumHazPlots_GT3F_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -2040,7 +2040,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_Male)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_Male/PS_CumHazPlots_Male.pdf",
          width = 6, height = 6, onefile = T)
@@ -2074,7 +2074,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_Male)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_Male/PS_CumHazPlots_Male_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -2108,7 +2108,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match1_Male)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_Male/PS_CumHazPlots_Male_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -2144,7 +2144,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_Female)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_Female/PS_CumHazPlots_Female.pdf",
          width = 6, height = 6, onefile = T)
@@ -2178,7 +2178,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_Female)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_Female/PS_CumHazPlots_Female_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -2208,7 +2208,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match1_Female)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_Female/PS_CumHazPlots_Female_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -2243,7 +2243,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_GT65)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT65/PS_CumHazPlots_GT65.pdf",
          width = 6, height = 6, onefile = T)
@@ -2277,7 +2277,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_GT65)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT65/PS_CumHazPlots_GT65_365.pdf",
          width = 6, height = 6, onefile = T)
@@ -2311,7 +2311,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU30, Composite_wMort_30) ~ DCB_DES, data = df.match1_GT65)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_GT65/PS_CumHazPlots_GT65_30.pdf",
          width = 6, height = 6, onefile = T)
@@ -2347,7 +2347,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU, Composite_wMort) ~ DCB_DES, data = df.match1_LT65)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_LT65/PS_CumHazPlots_LT65.pdf",
          width = 6, height = 6, onefile = T)
@@ -2381,7 +2381,7 @@ ps_plot5 <- ggsurvplot(fit5, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
 
 fit6<- survfit(Surv(Composite_wMort_FU365, Composite_wMort_365) ~ DCB_DES, data = df.match1_LT65)
 ps_plot6 <- ggsurvplot(fit6, fun = "cumhaz", pval = TRUE, conf.int = TRUE,
-           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.3), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.1), legend.title = "")
+           risk.table = T, risk.table.y.text.col = TRUE, ylim=c(0,0.6), xscale="d_y", legend.labs = c("DCB", "DES"), xlab = "Years Since Index Procedure", ylab = "Probability of Incurring Composite Endpoint", palette = c("#fba30c", "#0077b8"), theme = "lancet", break.time.by	= 365.25, pval.coord = c(0,0.3), legend.title = "")
 
 cairo_pdf(filename = "Cum_Haz_Plots_Matched_LT65/PS_CumHazPlots_LT65_365.pdf",
          width = 6, height = 6, onefile = T)
